@@ -1,13 +1,11 @@
 name: Sincronizar lancamentos e publicar paginas
 
 on:
-  # Executa automaticamente quando um Release e publicado ou alterado.
   release:
     types: [published, released, edited]
 
-  # Executa automaticamente quando o painel ou este workflow muda.
   push:
-    branches: [principal]
+    branches: [main]
     paths:
       - "index.html"
       - ".nojekyll"
@@ -15,11 +13,9 @@ on:
       - "RELEASE.md"
       - ".github/workflows/sync-release-data.yml"
 
-  # Verificacao automatica de Releases atualizados.
   schedule:
     - cron: "*/15 * * * *"
 
-  # Mantem a opcao manual para contingencia.
   workflow_dispatch:
 
 permissions:
@@ -39,8 +35,6 @@ jobs:
     steps:
       - name: Baixar repositorio
         uses: actions/checkout@v4
-        with:
-          ref: principal
 
       - name: Criar estrutura da publicacao
         shell: bash
@@ -86,13 +80,11 @@ jobs:
           repo = os.environ["GH_REPO"]
           data_dir = Path("public/data")
           data_dir.mkdir(parents=True, exist_ok=True)
-
           releases = json.loads(Path("releases.json").read_text(encoding="utf-8"))
           arquivos = []
 
           for release in releases:
               tag = str(release.get("tagName", "")).strip()
-
               if release.get("isDraft"):
                   continue
               if not re.fullmatch(r"RN-\d{2}-\d{2}", tag):
@@ -100,23 +92,19 @@ jobs:
 
               asset = f"{tag}.json"
               destino = data_dir / asset
-
-              cmd = [
-                  "gh", "release", "download", tag,
-                  "--repo", repo,
-                  "--pattern", asset,
-                  "--dir", str(data_dir),
-                  "--clobber",
-              ]
-              result = subprocess.run(cmd, text=True, capture_output=True)
+              result = subprocess.run(
+                  ["gh", "release", "download", tag,
+                   "--repo", repo, "--pattern", asset,
+                   "--dir", str(data_dir), "--clobber"],
+                  text=True, capture_output=True
+              )
 
               if result.returncode != 0 or not destino.exists():
-                  print(f"AVISO: asset ausente ou indisponivel: {asset}")
+                  print(f"AVISO: asset ausente: {asset}")
                   if result.stderr:
                       print(result.stderr)
                   continue
 
-              # Garante que o asset seja um JSON valido antes da publicacao.
               try:
                   json.loads(destino.read_text(encoding="utf-8-sig"))
               except Exception as exc:
@@ -127,42 +115,39 @@ jobs:
               arquivos.append({
                   "competencia": f"{ano:04d}-{mes:02d}",
                   "arquivo": asset,
-                  "release": tag,
+                  "release": tag
               })
 
           arquivos.sort(key=lambda item: item["competencia"])
-
           if not arquivos:
-              raise SystemExit(
-                  "Nenhum asset RN-aa-mm.json foi encontrado em Releases publicados."
-              )
+              raise SystemExit("Nenhum asset RN-aa-mm.json encontrado nos Releases publicados.")
 
           manifest = {
               "schemaVersion": 1,
               "origem": "GitHub Releases",
               "repositorio": repo,
               "atualizadoEm": datetime.now(timezone.utc).isoformat(),
-              "arquivos": arquivos,
+              "arquivos": arquivos
           }
 
           Path("public/data/manifest.json").write_text(
               json.dumps(manifest, ensure_ascii=False, indent=2),
-              encoding="utf-8",
+              encoding="utf-8"
           )
 
-          print("Manifesto criado com os arquivos:")
+          print("Arquivos sincronizados:")
           for item in arquivos:
               print(f"- {item['competencia']} | {item['arquivo']}")
           PY
 
-      - name: Validar pacote antes da publicacao
+      - name: Validar pacote
         shell: bash
         run: |
           set -euo pipefail
           test -f public/index.html
           test -f public/data/manifest.json
-          ls -lh public/data
           python3 -m json.tool public/data/manifest.json > /dev/null
+          ls -lh public/data
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
