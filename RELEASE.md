@@ -1,11 +1,7 @@
-# Publicacao mensal no GitHub Release
+# Rotina de Release
 
-1. Processe os arquivos RSUL e Regional Leste na pagina Adm.
-2. Baixe `RN-aa-mm.csv` e `RN-aa-mm.json`.
-3. Clique no botao GitHub.
-4. Abra o repositorio escolhido e entre em **Releases**.
-5. Crie ou atualize o Release da competencia.
-6. Anexe o JSON oficial do mes.
-7. Ao atualizar o mesmo mes, substitua o asset em vez de criar nomes como final, novo ou v2.
-
-Exemplo: `RN-26-09.json`.
+1. Gere o JSON na página Adm.
+2. Crie o Release com tag `RN-aa-mm`.
+3. Anexe o asset com o mesmo nome: `RN-aa-mm.json`.
+4. Não renomeie o asset e não publique o JSON como draft.
+5. Abra o painel e clique em Atualizar dados.
